@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="安全パトロール">
+<meta name="theme-color" content="#1a3a5c">
+<link rel="manifest" href="manifest.json">
+<title>作業・安全パトロールチェック表</title>
+<style>
+  :root {
+    --primary: #1a3a5c;
+    --primary-light: #2a5a8c;
+    --accent: #e8a020;
+    --accent-light: #f5c050;
+    --danger: #c0392b;
+    --success: #27ae60;
+    --na: #7f8c8d;
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --text: #1a2533;
+    --text-sub: #5a6a7a;
+    --border: #d0dce8;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(26,58,92,0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 84px;
+  }
+  header {
+    background: var(--primary);
+    color: #fff;
+    padding: 14px 16px 12px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  header h1 { font-size: 16px; font-weight: 700; letter-spacing: 0.04em; }
+  header p { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+
+  .steps {
+    display: flex;
+    background: var(--primary-light);
+    overflow-x: auto;
+  }
+  .step-btn {
+    flex: 1;
+    min-width: 70px;
+    padding: 9px 4px;
+    background: none; border: none;
+    color: rgba(255,255,255,0.45);
+    font-size: 10px; font-family: inherit;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    text-align: center; white-space: nowrap;
+  }
+  .step-btn.active { color: var(--accent-light); border-bottom-color: var(--accent); font-weight: 700; }
+  .step-btn.done { color: rgba(255,255,255,0.75); }
+
+  main { padding: 14px; max-width: 600px; margin: 0 auto; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 12px; font-weight: 700; color: var(--primary);
+    margin-bottom: 10px; padding-bottom: 7px;
+    border-bottom: 2px solid var(--border);
+    display: flex; align-items: center; gap: 5px;
+  }
+
+  label { font-size: 12px; font-weight: 600; color: var(--text-sub); display: block; margin-bottom: 3px; }
+  input[type="text"], input[type="date"], select, textarea {
+    width: 100%; padding: 9px 11px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px; font-size: 14px;
+    font-family: inherit; color: var(--text);
+    background: #fff; margin-bottom: 10px;
+    -webkit-appearance: none;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); }
+  textarea { resize: vertical; min-height: 56px; }
+
+  /* チェックリスト */
+  .check-group {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .group-header {
+    background: var(--primary);
+    color: #fff;
+    padding: 8px 12px;
+    font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .check-item {
+    border-bottom: 1px solid var(--border);
+  }
+  .check-item:last-child { border-bottom: none; }
+  .check-main {
+    display: flex;
+    align-items: center;
+    padding: 9px 12px;
+    gap: 8px;
+  }
+  .item-num {
+    font-size: 11px; color: var(--text-sub);
+    min-width: 22px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .check-label {
+    flex: 1; font-size: 12px; line-height: 1.5;
+  }
+  .radio-group {
+    display: flex; gap: 5px; flex-shrink: 0;
+  }
+  .radio-btn {
+    padding: 5px 9px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    font-size: 14px; font-weight: 700;
+    cursor: pointer; background: #f5f5f5; color: var(--text-sub);
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    min-width: 36px; text-align: center;
+  }
+  .radio-btn.ok.sel  { background: var(--success);  border-color: var(--success);  color: #fff; }
+  .radio-btn.ng.sel  { background: var(--danger);   border-color: var(--danger);   color: #fff; }
+  .radio-btn.na.sel  { background: var(--na);        border-color: var(--na);        color: #fff; }
+
+  /* 否判定時の摘要入力 */
+  .ng-detail {
+    display: none;
+    padding: 0 12px 10px 44px;
+    background: #fff8f8;
+  }
+  .ng-detail textarea {
+    margin-bottom: 0;
+    border-color: #f0bbbb;
+    min-height: 44px;
+    font-size: 12px;
+  }
+  .ng-detail label { color: var(--danger); }
+
+  /* 写真 */
+  .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .photo-slot { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .photo-slot-header { background: var(--primary); color: #fff; padding: 6px 10px; font-size: 11px; font-weight: 700; text-align: center; }
+  .photo-preview { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; cursor: pointer; }
+  .photo-placeholder {
+    width: 100%; aspect-ratio: 4/3;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: #e8eef5; cursor: pointer; gap: 5px;
+    color: var(--text-sub); font-size: 11px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .photo-placeholder .cam { font-size: 26px; }
+  .photo-caption { padding: 7px; }
+  .photo-caption input { margin-bottom: 0; font-size: 11px; padding: 6px 8px; }
+  input[type="file"] { display: none; }
+
+  /* 送信ボタン */
+  .submit-area {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 10px 14px;
+    background: rgba(240,244,248,0.96);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.1);
+    z-index: 100;
+    display: flex; gap: 8px;
+    max-width: 600px; margin: 0 auto;
+  }
+  .btn {
+    flex: 1; padding: 13px;
+    border: none; border-radius: 10px;
+    font-size: 14px; font-weight: 700;
+    font-family: inherit; cursor: pointer;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-accent  { background: var(--accent);  color: #fff; }
+  .btn-ghost   { flex: 0 0 auto; padding: 13px 16px; background: #fff; color: var(--text-sub); border: 1.5px solid var(--border); }
+
+  /* 確認画面 */
+  .confirm-row { display: flex; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px; gap: 8px; }
+  .confirm-key { color: var(--text-sub); min-width: 80px; flex-shrink: 0; }
+  .confirm-val { font-weight: 600; }
+  .confirm-photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .confirm-photo img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 6px; }
+  .confirm-photo p { font-size: 11px; margin-top: 3px; color: var(--text-sub); }
+
+  /* 進捗バッジ */
+  .progress-bar {
+    height: 4px; background: #e0e8f0; border-radius: 2px; margin: 8px 0 0;
+  }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; }
+
+  /* ローディング */
+  .loading-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(26,58,92,0.75); z-index: 200;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; color: #fff; font-size: 15px; font-weight: 700;
+  }
+  .loading-overlay.show { display: flex; }
+  .spinner {
+    width: 42px; height: 42px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* 完了画面 */
+  .done-screen { display: none; text-align: center; padding: 40px 20px; }
+  .done-screen.show { display: block; }
+  .done-icon { font-size: 60px; margin-bottom: 14px; }
+  .done-title { font-size: 20px; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
+  .done-msg { font-size: 13px; color: var(--text-sub); line-height: 1.7; margin-bottom: 22px; white-space: pre-wrap; }
+  .btn-new { display: inline-block; padding: 13px 28px; background: var(--primary); color: #fff; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; border: none; font-family: inherit; }
+
+  .ng-badge { display: inline-block; background: var(--danger); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🦺 作業・安全パトロールチェック表</h1>
+  <p id="header-date"></p>
+</header>
+
+<div class="steps">
+  <button class="step-btn active" onclick="goStep(0)" id="step0">①現場情報</button>
+  <button class="step-btn" onclick="goStep(1)" id="step1">②チェック</button>
+  <button class="step-btn" onclick="goStep(2)" id="step2">③写真</button>
+  <button class="step-btn" onclick="goStep(3)" id="step3">④確認・送信</button>
+</div>
+
+<main>
+
+<!-- ページ0: 現場情報 -->
+<div class="page active" id="page0">
+  <div class="card">
+    <div class="card-title">📋 現場情報</div>
+    <label>実施日</label>
+    <input type="date" id="patrol-date">
+    <label>現場名</label>
+    <input type="text" id="site-name" placeholder="例：○○新築工事">
+    <label>現場担当者</label>
+    <input type="text" id="site-manager" placeholder="例：〇〇さん">
+    <label>工期</label>
+    <input type="text" id="work-period" placeholder="例：令和7年11月14日〜令和8年9月30日">
+    <label>パトロール実施者</label>
+    <input type="text" id="inspector" placeholder="例：坂本">
+    <label>天候</label>
+    <select id="weather">
+      <option value="">選択</option>
+      <option>晴れ</option><option>曇り</option><option>雨</option><option>雪</option>
+    </select>
+  </div>
+  <div class="card" style="background:#fffdf0;border:1.5px solid #e8c870;">
+    <div style="font-size:12px;color:#7a5a00;line-height:1.6;">
+      📌 <strong>チェック記号の凡例</strong><br>
+      ○（適正）＝「良」　　Ｘ（不適正）＝「否」　　／（対象外）＝「－」
+    </div>
+  </div>
+</div>
+
+<!-- ページ1: チェックリスト -->
+<div class="page" id="page1">
+  <div id="progress-wrap" style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:10px 14px;margin-bottom:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+      <span style="color:var(--text-sub);">入力済み</span>
+      <span id="progress-text" style="font-weight:700;color:var(--primary);">0 / 32 項目</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  </div>
+  <div id="checklist-container"></div>
+</div>
+
+<!-- ページ2: 写真・所見 -->
+<div class="page" id="page2">
+  <div class="card" style="margin-bottom:10px;">
+    <div class="card-title">📸 現場写真（最大4枚）</div>
+    <p style="font-size:11px;color:var(--text-sub);">各写真に説明（是正前・是正後等）を入力してください</p>
+  </div>
+  <div class="photo-grid" id="photo-grid"></div>
+  <div class="card">
+    <div class="card-title">📝 その他・特記事項</div>
+    <textarea id="remarks" placeholder="その他指摘事項、特記事項など"></textarea>
+  </div>
+</div>
+
+<!-- ページ3: 確認・送信 -->
+<div class="page" id="page3">
+  <div class="card" style="margin-bottom:10px;">
+    <div class="card-title">📋 現場情報</div>
+    <div id="confirm-basic"></div>
+  </div>
+  <div class="card" style="margin-bottom:10px;">
+    <div class="card-title">✅ チェック結果</div>
+    <div id="confirm-check"></div>
+  </div>
+  <div class="card" style="margin-bottom:10px;">
+    <div class="card-title">📸 写真</div>
+    <div class="confirm-photo-grid" id="confirm-photos"></div>
+  </div>
+  <div class="card" style="margin-bottom:10px;">
+    <div class="card-title">📝 その他・特記事項</div>
+    <p id="confirm-remarks" style="font-size:12px;line-height:1.6;"></p>
+  </div>
+  <div style="height:16px"></div>
+</div>
+</main>
+
+<!-- 完了画面 -->
+<div class="done-screen" id="done-screen">
+  <div class="done-icon">✅</div>
+  <div class="done-title">記録完了！</div>
+  <div class="done-msg" id="done-msg"></div>
+  <button class="btn-new" onclick="resetAll()">次の現場を入力する</button>
+</div>
+
+<!-- ローディング -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div>スプレッドシートに記録中…</div>
+</div>
+
+<!-- ボタンエリア -->
+<div class="submit-area" id="submit-area">
+  <button class="btn btn-ghost" id="btn-back" onclick="prevStep()" style="display:none">◀ 戻る</button>
+  <button class="btn btn-primary" id="btn-next" onclick="nextStep()">次へ ▶</button>
+  <button class="btn btn-accent" id="btn-submit" onclick="submitData()" style="display:none">📤 スプレッドシートに送信</button>
+</div>
+
+<script>
+// ★Apps ScriptのデプロイURLをここに設定
+const GAS_URL = 'YOUR_GAS_URL_HERE';
+
+// ============================================================
+// チェックリスト定義（実際の様式の32項目をグループ化）
+// ○：適正 → 良  Ｘ：不適正 → 否  ／：対象外 → －
+// ============================================================
+const CHECKLIST = [
+  {
+    cat: '仮設・周辺環境',
+    icon: '🏗️',
+    items: [
+      { no:  1, text: '足場は適切か（転落防止、ネット施工状況、控え、資材放置）' },
+      { no:  5, text: '仮囲いは適切か' },
+      { no:  6, text: '電線防護管設置状況' },
+      { no:  7, text: '仮設トイレ設置状況（位置、清掃、転倒防止、汲み取り）' },
+    ]
+  },
+  {
+    cat: '掲示・表示',
+    icon: '📢',
+    items: [
+      { no:  2, text: '看板（確認、労災、作業主任者、環境方針、協力業者表示板）' },
+      { no:  3, text: '掲示　石綿調査結果報告' },
+      { no:  4, text: '看板シートは張られているか' },
+    ]
+  },
+  {
+    cat: '近隣・環境対策',
+    icon: '🌿',
+    items: [
+      { no:  8, text: '資材等は近隣越境していないか' },
+      { no:  9, text: '前面道路清掃されているか' },
+      { no: 10, text: '側溝内へセメント系汚水排水していないか' },
+      { no: 11, text: '駐車車両は問題ないか' },
+      { no: 30, text: '粉塵、騒音、振動、異臭等の法律に適用しているか' },
+      { no: 32, text: '近隣対策（ガードマン、夜間誘導灯等）' },
+    ]
+  },
+  {
+    cat: '作業員の安全・保護具',
+    icon: '👷',
+    items: [
+      { no: 12, text: 'ヘルメット着用はできているか（顎ひも）' },
+    ]
+  },
+  {
+    cat: '安全設備・防火',
+    icon: '🚒',
+    items: [
+      { no: 13, text: '消火器は見えやすい場所に設置しているか' },
+      { no: 14, text: '開口部は落下防止措置が取られているか' },
+      { no: 15, text: 'はしごの状態は良いか（固定、角度75°、突出し60㎝）' },
+    ]
+  },
+  {
+    cat: '施工・現場管理',
+    icon: '🔨',
+    items: [
+      { no: 16, text: '土足禁止になっているか' },
+      { no: 17, text: '雨仕舞いは適正か' },
+      { no: 18, text: '屋内養生は適正か' },
+      { no: 19, text: '屋外養生は適正か' },
+      { no: 20, text: '整理整頓はできているか（内外部）' },
+      { no: 21, text: '指定された場所で喫煙しているか' },
+      { no: 22, text: '工法は適正か' },
+      { no: 23, text: '工期は守られているか' },
+      { no: 24, text: '工具（安全カバー、作業姿勢等）' },
+    ]
+  },
+  {
+    cat: '廃棄物・資材',
+    icon: '♻️',
+    items: [
+      { no: 25, text: '廃棄物は適正保管されているか' },
+    ]
+  },
+  {
+    cat: '法令・資格・書類確認',
+    icon: '📄',
+    items: [
+      { no: 26, text: '法、その他要求事項に適合してるか' },
+      { no: 27, text: '適合した有資格を使用しているか' },
+      { no: 28, text: 'ＫＹ日誌の確認' },
+      { no: 29, text: '足場点検記録の確認（始業時、巡回時、荒天及び災害）' },
+    ]
+  },
+  {
+    cat: 'その他',
+    icon: '📌',
+    items: [
+      { no: 31, text: 'その他' },
+    ]
+  },
+];
+
+// ============================================================
+// 状態管理
+// ============================================================
+let currentStep = 0;
+const photos   = [null, null, null, null];
+const captions = ['', '', '', ''];
+let checkResults = {}; // "ci-ii": "ok"|"ng"|"na"
+let ngNotes      = {}; // "ci-ii": string
+
+const TOTAL_ITEMS = CHECKLIST.reduce((s, c) => s + c.items.length, 0);
+
+// ============================================================
+// 初期化
+// ============================================================
+window.addEventListener('load', () => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+  }
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth()+1).padStart(2,'0');
+  const d = String(today.getDate()).padStart(2,'0');
+  document.getElementById('patrol-date').value = `${y}-${m}-${d}`;
+  document.getElementById('header-date').textContent = `${y}年${m}月${d}日`;
+
+  buildChecklist();
+  buildPhotoGrid();
+});
+
+// ============================================================
+// チェックリスト生成
+// ============================================================
+function buildChecklist() {
+  const container = document.getElementById('checklist-container');
+  CHECKLIST.forEach((cat, ci) => {
+    const div = document.createElement('div');
+    div.className = 'check-group';
+    let html = `<div class="group-header"><span>${cat.icon}</span><span>${cat.cat}</span></div>`;
+    cat.items.forEach((item, ii) => {
+      const key = `${ci}-${ii}`;
+      html += `
+        <div class="check-item" id="item-${key}">
+          <div class="check-main">
+            <span class="item-num">${String(item.no).padStart(2,'0')}</span>
+            <span class="check-label">${item.text}</span>
+            <div class="radio-group">
+              <button class="radio-btn ok" onclick="setCheck('${key}','ok',this)">○</button>
+              <button class="radio-btn ng" onclick="setCheck('${key}','ng',this)">×</button>
+              <button class="radio-btn na" onclick="setCheck('${key}','na',this)">／</button>
+            </div>
+          </div>
+          <div class="ng-detail" id="note-${key}">
+            <label>摘要・是正内容</label>
+            <textarea placeholder="対応内容、処置日等を記入" oninput="ngNotes['${key}']=this.value"></textarea>
+          </div>
+        </div>`;
+    });
+    div.innerHTML = html;
+    container.appendChild(div);
+  });
+}
+
+function setCheck(key, val, btn) {
+  checkResults[key] = val;
+  const group = btn.closest('.radio-group');
+  group.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  document.getElementById(`note-${key}`).style.display = val === 'ng' ? 'block' : 'none';
+  updateProgress();
+}
+
+function updateProgress() {
+  const done = Object.keys(checkResults).length;
+  document.getElementById('progress-text').textContent = `${done} / ${TOTAL_ITEMS} 項目`;
+  document.getElementById('progress-fill').style.width = `${Math.round(done/TOTAL_ITEMS*100)}%`;
+  // NG件数バッジ
+  const ngCount = Object.values(checkResults).filter(v => v === 'ng').length;
+  const stepBtn = document.getElementById('step1');
+  const badge = stepBtn.querySelector('.ng-badge');
+  if (ngCount > 0) {
+    if (!badge) stepBtn.innerHTML = `②チェック<span class="ng-badge">${ngCount}件否</span>`;
+    else badge.textContent = `${ngCount}件否`;
+  } else if (badge) {
+    badge.remove();
+  }
+}
+
+// ============================================================
+// 写真グリッド生成
+// ============================================================
+function buildPhotoGrid() {
+  const grid = document.getElementById('photo-grid');
+  for (let i = 0; i < 4; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'photo-slot';
+    slot.innerHTML = `
+      <div class="photo-slot-header">写真 ${i+1}</div>
+      <div id="ph-wrap-${i}">
+        <div class="photo-placeholder" onclick="triggerFile(${i})">
+          <span class="cam">📷</span>
+          <span>タップして撮影</span>
+        </div>
+      </div>
+      <div class="photo-caption">
+        <input type="text" id="cap-${i}" placeholder="説明（是正前・是正後 等）" oninput="captions[${i}]=this.value">
+      </div>
+      <input type="file" id="file-${i}" accept="image/*" capture="environment" onchange="handlePhoto(${i},this)">
+    `;
+    grid.appendChild(slot);
+  }
+}
+
+function triggerFile(i) { document.getElementById(`file-${i}`).click(); }
+
+function handlePhoto(i, input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    photos[i] = e.target.result;
+    document.getElementById(`ph-wrap-${i}`).innerHTML =
+      `<img class="photo-preview" src="${e.target.result}" onclick="triggerFile(${i})">`;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+// ============================================================
+// ステップ制御
+// ============================================================
+function goStep(n) {
+  currentStep = n;
+  document.querySelectorAll('.page').forEach((p,i) => p.classList.toggle('active', i===n));
+  document.querySelectorAll('.step-btn').forEach((b,i) => {
+    b.classList.toggle('active', i===n);
+    b.classList.toggle('done', i<n);
+  });
+  document.getElementById('btn-back').style.display = n > 0 ? '' : 'none';
+  document.getElementById('btn-next').style.display = n < 3 ? '' : 'none';
+  document.getElementById('btn-submit').style.display = n === 3 ? '' : 'none';
+  if (n === 3) buildConfirm();
+  window.scrollTo(0, 0);
+}
+function nextStep() {
+  if (currentStep === 0 && !validateBasic()) return;
+  goStep(Math.min(currentStep + 1, 3));
+}
+function prevStep() { goStep(Math.max(currentStep - 1, 0)); }
+
+function validateBasic() {
+  const checks = [['patrol-date','実施日'],['site-name','現場名'],['inspector','パトロール実施者']];
+  for (const [id, label] of checks) {
+    if (!document.getElementById(id).value.trim()) {
+      alert(`「${label}」を入力してください`);
+      document.getElementById(id).focus();
+      return false;
+    }
+  }
+  return true;
+}
+
+// ============================================================
+// 確認画面生成
+// ============================================================
+function buildConfirm() {
+  const basic = [
+    ['実施日',      document.getElementById('patrol-date').value],
+    ['現場名',      document.getElementById('site-name').value],
+    ['現場担当者',  document.getElementById('site-manager').value],
+    ['工期',        document.getElementById('work-period').value],
+    ['実施者',      document.getElementById('inspector').value],
+    ['天候',        document.getElementById('weather').value],
+  ];
+  document.getElementById('confirm-basic').innerHTML = basic
+    .filter(r=>r[1])
+    .map(r=>`<div class="confirm-row"><span class="confirm-key">${r[0]}</span><span class="confirm-val">${r[1]}</span></div>`)
+    .join('');
+
+  // チェック集計
+  let okC=0, ngC=0, naC=0, unC=0;
+  let ngList = '';
+  CHECKLIST.forEach((cat, ci) => {
+    cat.items.forEach((item, ii) => {
+      const key = `${ci}-${ii}`;
+      const v = checkResults[key];
+      if (v==='ok') okC++;
+      else if (v==='ng') {
+        ngC++;
+        const note = ngNotes[key] || '';
+        ngList += `<div class="confirm-row" style="align-items:flex-start">
+          <span class="confirm-key" style="color:var(--danger);font-weight:700">✗ No.${String(item.no).padStart(2,'0')}</span>
+          <span class="confirm-val" style="color:var(--danger);font-size:11px;">${item.text}${note?'<br><span style="color:#888;font-weight:400">'+note+'</span>':''}</span>
+        </div>`;
+      }
+      else if (v==='na') naC++;
+      else unC++;
+    });
+  });
+  document.getElementById('confirm-check').innerHTML = `
+    <div class="confirm-row"><span class="confirm-key">適正（○）</span><span class="confirm-val" style="color:var(--success)">${okC}件</span></div>
+    <div class="confirm-row"><span class="confirm-key">不適正（×）</span><span class="confirm-val" style="color:var(--danger)">${ngC}件</span></div>
+    <div class="confirm-row"><span class="confirm-key">対象外（／）</span><span class="confirm-val" style="color:var(--na)">${naC}件</span></div>
+    <div class="confirm-row"><span class="confirm-key">未入力</span><span class="confirm-val">${unC}件</span></div>
+    ${ngList ? '<div style="margin-top:6px;font-size:11px;font-weight:700;color:var(--danger);">■ 不適正（要是正）項目</div>'+ngList : ''}
+  `;
+
+  // 写真
+  const pg = document.getElementById('confirm-photos');
+  pg.innerHTML = '';
+  let hasPhoto = false;
+  photos.forEach((p,i) => {
+    if (p) {
+      hasPhoto = true;
+      pg.innerHTML += `<div class="confirm-photo"><img src="${p}"><p>写真${i+1}：${captions[i]||'説明なし'}</p></div>`;
+    }
+  });
+  if (!hasPhoto) pg.innerHTML = '<p style="font-size:12px;color:var(--text-sub)">写真なし</p>';
+
+  document.getElementById('confirm-remarks').textContent = document.getElementById('remarks').value || '（記載なし）';
+}
+
+// ============================================================
+// 送信
+// ============================================================
+async function submitData() {
+  if (GAS_URL === 'YOUR_GAS_URL_HERE') {
+    alert('Apps ScriptのURLが設定されていません。\nindex.htmlのGAS_URLを設定してください。');
+    return;
+  }
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('submit-area').style.display = 'none';
+
+  const checkData = [];
+  CHECKLIST.forEach((cat, ci) => {
+    cat.items.forEach((item, ii) => {
+      const key = `${ci}-${ii}`;
+      checkData.push({
+        no:       item.no,
+        category: cat.cat,
+        item:     item.text,
+        result:   checkResults[key] || '未',
+        note:     ngNotes[key] || '',
+      });
+    });
+  });
+
+  const payload = {
+    date:        document.getElementById('patrol-date').value,
+    siteName:    document.getElementById('site-name').value,
+    siteManager: document.getElementById('site-manager').value,
+    workPeriod:  document.getElementById('work-period').value,
+    inspector:   document.getElementById('inspector').value,
+    weather:     document.getElementById('weather').value,
+    remarks:     document.getElementById('remarks').value,
+    checklist:   checkData,
+    photos:      photos.map((p,i) => ({ data: p||'', caption: captions[i]||'' })),
+  };
+
+  try {
+    const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+    const json = await res.json();
+    document.getElementById('loading').classList.remove('show');
+    if (json.status === 'ok') {
+      document.getElementById('done-msg').textContent =
+        `「${payload.siteName}」の記録を書き込みました。\nシート名：${json.sheetName}`;
+      document.querySelector('main').style.display   = 'none';
+      document.querySelector('.steps').style.display = 'none';
+      document.getElementById('done-screen').classList.add('show');
+      document.getElementById('submit-area').style.display = 'none';
+    } else throw new Error(json.message || 'エラーが発生しました');
+  } catch (e) {
+    document.getElementById('loading').classList.remove('show');
+    document.getElementById('submit-area').style.display = '';
+    alert('送信エラー：' + e.message);
+  }
+}
+
+function resetAll() { location.reload(); }
+</script>
+</body>
+</html>
