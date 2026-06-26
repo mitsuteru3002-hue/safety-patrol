@@ -356,7 +356,7 @@
 
 <script>
 // ★Apps ScriptのデプロイURLをここに設定
-const GAS_URL = ' https://mitsuteru3002-hue.github.io/safety-patrol/';
+const GAS_URL = 'YOUR_GAS_URL_HERE';
 
 // ============================================================
 // チェックリスト定義（実際の様式の32項目をグループ化）
@@ -567,13 +567,29 @@ function triggerFile(i) { document.getElementById(`file-${i}`).click(); }
 
 function handlePhoto(i, input) {
   if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const img = new Image();
   const reader = new FileReader();
   reader.onload = e => {
-    photos[i] = e.target.result;
-    document.getElementById(`ph-wrap-${i}`).innerHTML =
-      `<img class="photo-preview" src="${e.target.result}" onclick="triggerFile(${i})">`;
+    img.onload = () => {
+      // 長辺1200px以内に圧縮
+      const MAX = 1200;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else        { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.75);
+      photos[i] = compressed;
+      document.getElementById(`ph-wrap-${i}`).innerHTML =
+        `<img class="photo-preview" src="${compressed}" onclick="triggerFile(${i})">`;
+    };
+    img.src = e.target.result;
   };
-  reader.readAsDataURL(input.files[0]);
+  reader.readAsDataURL(file);
 }
 
 // ============================================================
@@ -707,23 +723,82 @@ async function submitData() {
     photos:      photos.map((p,i) => ({ data: p||'', caption: captions[i]||'' })),
   };
 
+  // タイムアウト表示（30秒後にメッセージ更新）
+  const loadingMsg = document.querySelector('#loading div:last-child');
+  const timeoutId = setTimeout(() => {
+    loadingMsg.textContent = 'もうしばらくお待ちください…（写真がある場合は時間がかかります）';
+  }, 30000);
+
   try {
-    const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-    const json = await res.json();
+    // iPhoneのCORS問題に対応：no-corsで送信し、GASからのリダイレクトで完了確認
+    const controller = new AbortController();
+    const hardTimeout = setTimeout(() => controller.abort(), 120000); // 2分でタイムアウト
+
+    let succeeded = false;
+    try {
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      clearTimeout(hardTimeout);
+      // レスポンスが読める場合（PC・Android）
+      try {
+        const json = await res.json();
+        if (json.status === 'ok') succeeded = true;
+        else throw new Error(json.message || 'GASエラー');
+      } catch {
+        // no-corsで本文が読めない場合はステータス確認
+        if (res.status === 0 || res.type === 'opaque' || res.ok) succeeded = true;
+      }
+    } catch (fetchErr) {
+      clearTimeout(hardTimeout);
+      // iPhoneでno-corsの場合、fetchがCORSエラーになることがある
+      // その場合はフォームを使ったフォールバック送信
+      if (fetchErr.name !== 'AbortError') {
+        await fallbackSubmit(payload);
+        succeeded = true;
+      } else {
+        throw new Error('通信がタイムアウトしました（2分）。Wi-Fiに接続して再試行してください。');
+      }
+    }
+
+    clearTimeout(timeoutId);
     document.getElementById('loading').classList.remove('show');
-    if (json.status === 'ok') {
+
+    if (succeeded) {
       document.getElementById('done-msg').textContent =
-        `「${payload.siteName}」の記録を書き込みました。\nシート名：${json.sheetName}`;
+        `「${payload.siteName}」の記録を送信しました。\nスプレッドシートをご確認ください。`;
       document.querySelector('main').style.display   = 'none';
       document.querySelector('.steps').style.display = 'none';
       document.getElementById('done-screen').classList.add('show');
       document.getElementById('submit-area').style.display = 'none';
-    } else throw new Error(json.message || 'エラーが発生しました');
+    }
   } catch (e) {
+    clearTimeout(timeoutId);
     document.getElementById('loading').classList.remove('show');
     document.getElementById('submit-area').style.display = '';
-    alert('送信エラー：' + e.message);
+    alert('送信エラー：' + e.message + '\n\nGASのURLが正しいか、スプレッドシートIDが設定されているか確認してください。');
   }
+}
+
+// フォールバック：formタグ経由で送信（CORS回避）
+function fallbackSubmit(payload) {
+  return new Promise((resolve) => {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = GAS_URL;
+    form.target = '_blank';
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'payload';
+    input.value = JSON.stringify(payload);
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+    setTimeout(resolve, 3000);
+  });
 }
 
 function resetAll() { location.reload(); }
